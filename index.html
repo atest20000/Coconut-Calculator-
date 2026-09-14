@@ -6,7 +6,7 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Coconut Ledger">
-    <title>Pruthvirajsinh Coconut Price Tool</title>
+    <title>Pruthvirajsinh Coconut Tool</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <style>
         :root {
@@ -84,37 +84,6 @@
             outline: none;
             border-color: var(--ios-primary);
             background-color: #FFFFFF;
-        }
-
-        .filter-group {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 8px;
-            margin-bottom: 15px;
-        }
-
-        .filter-btn {
-            flex: 1;
-            min-width: 80px;
-            height: 36px;
-            background-color: #E5E5EA;
-            color: var(--ios-text);
-            border: none;
-            border-radius: 8px;
-            font-size: 12px;
-            font-weight: 600;
-            cursor: pointer;
-        }
-
-        .filter-btn.active {
-            background-color: var(--ios-primary);
-            color: white;
-        }
-
-        .custom-date-container {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 15px;
         }
 
         .btn-group {
@@ -222,12 +191,58 @@
             padding: 10px;
             border-radius: 8px;
         }
+
+        /* Filter Modal Styling */
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.5);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            padding: 20px;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 14px;
+            padding: 20px;
+            width: 100%;
+            max-width: 360px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+
+        .modal-title {
+            font-size: 16px;
+            font-weight: 700;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+
+        .modal-btn {
+            width: 100%;
+            height: 40px;
+            background-color: #F2F2F7;
+            border: 1px solid #C6C6C8;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 10px;
+            cursor: pointer;
+        }
+
+        .modal-btn.primary {
+            background-color: var(--ios-primary);
+            color: white;
+            border: none;
+        }
     </style>
 </head>
 <body>
 
     <div class="header">
-        <h1>Pruthvirajsinh Coconut Price Tool</h1>
+        <h1>Pruthvirajsinh Coconut Tool</h1>
         <p>Sales Ledger & Share Calculator</p>
     </div>
 
@@ -252,27 +267,6 @@
         </form>
     </div>
 
-    <div class="card">
-        <label style="margin-bottom:10px;">Filter Records</label>
-        <div class="filter-group">
-            <button class="filter-btn active" id="btnAll" onclick="setFilter('all')">All Time</button>
-            <button class="filter-btn" id="btn1Month" onclick="setFilter('1month')">Last 1 Month</button>
-            <button class="filter-btn" id="btn1Year" onclick="setFilter('1year')">Last 1 Year</button>
-            <button class="filter-btn" id="btnCustom" onclick="setFilter('custom')">Custom Date</button>
-        </div>
-
-        <div id="customDateRange" class="custom-date-container" style="display: none;">
-            <div style="flex: 1;">
-                <label style="font-size: 11px;">Start Date</label>
-                <input type="date" id="startDate" onchange="renderTable()">
-            </div>
-            <div style="flex: 1;">
-                <label style="font-size: 11px;">End Date</label>
-                <input type="date" id="endDate" onchange="renderTable()">
-            </div>
-        </div>
-    </div>
-
     <div id="exportContent" class="pdf-export-area">
         <div class="summary-card">
             <div class="summary-item">
@@ -280,12 +274,12 @@
                 <div class="amount" id="totalRevenue">₹0.00</div>
             </div>
             <div class="summary-item">
-                <div class="title">Ashwin (25%)</div>
-                <div class="amount" id="totalAshwin" style="color: #007AFF;">₹0.00</div>
-            </div>
-            <div class="summary-item">
                 <div class="title">Pruthvirajsinh (75%)</div>
                 <div class="amount" id="totalPruthvirajsinh" style="color: #34C759;">₹0.00</div>
+            </div>
+            <div class="summary-item">
+                <div class="title">Ashwin (25%)</div>
+                <div class="amount" id="totalAshwin" style="color: #007AFF;">₹0.00</div>
             </div>
         </div>
 
@@ -299,8 +293,8 @@
                             <th>Qty</th>
                             <th>Price</th>
                             <th>Total</th>
-                            <th>Ashwin (25%)</th>
                             <th>Pruthvirajsinh (75%)</th>
+                            <th>Ashwin (25%)</th>
                             <th class="no-pdf">Action</th>
                         </tr>
                     </thead>
@@ -313,7 +307,26 @@
 
     <div class="btn-group">
         <button class="btn btn-export-csv" onclick="exportToCSV()">Export Excel (CSV)</button>
-        <button class="btn btn-export-pdf" onclick="exportToPDF()">Export PDF</button>
+        <button class="btn btn-export-pdf" onclick="openPdfModal()">Export PDF</button>
+    </div>
+
+    <!-- PDF Filter Selection Modal -->
+    <div id="pdfModal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-title">Select PDF Export Range</div>
+            <button class="modal-btn" onclick="generatePdf('all')">All Time Data</button>
+            <button class="modal-btn" onclick="generatePdf('1month')">Last 1 Month</button>
+            <button class="modal-btn" onclick="generatePdf('1year')">Last 1 Year</button>
+            
+            <div style="margin-top: 10px; border-top: 1px solid #E5E5EA; padding-top: 10px;">
+                <label style="font-size: 11px;">Custom Date Range</label>
+                <input type="date" id="pdfStartDate" style="margin-bottom: 8px;">
+                <input type="date" id="pdfEndDate" style="margin-bottom: 10px;">
+                <button class="modal-btn primary" onclick="generatePdf('custom')">Export Custom Range</button>
+            </div>
+            
+            <button class="modal-btn" style="background: none; border: none; color: var(--ios-danger); margin-bottom: 0;" onclick="closePdfModal()">Cancel</button>
+        </div>
     </div>
 
     <script>
@@ -328,30 +341,10 @@
         setTodayDate();
 
         let records = JSON.parse(localStorage.getItem('coconut_records')) || [];
-        let currentFilter = 'all';
-
-        function setFilter(filterType) {
-            currentFilter = filterType;
-            document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
-            
-            if (filterType === 'all') document.getElementById('btnAll').classList.add('active');
-            if (filterType === '1month') document.getElementById('btn1Month').classList.add('active');
-            if (filterType === '1year') document.getElementById('btn1Year').classList.add('active');
-            if (filterType === 'custom') document.getElementById('btnCustom').classList.add('active');
-
-            const customBox = document.getElementById('customDateRange');
-            if (filterType === 'custom') {
-                customBox.style.display = 'flex';
-            } else {
-                customBox.style.display = 'none';
-            }
-
-            renderTable();
-        }
 
         function saveAndRender() {
             localStorage.setItem('coconut_records', JSON.stringify(records));
-            renderTable();
+            renderTable(records);
         }
 
         document.getElementById('coconutForm').addEventListener('submit', function(e) {
@@ -367,8 +360,8 @@
                 quantity: quantity,
                 price: price,
                 total: total,
-                ashwinShare: total * 0.25,
-                prithvirajShare: total * 0.75
+                prithvirajShare: total * 0.75,
+                ashwinShare: total * 0.25
             });
 
             saveAndRender();
@@ -384,51 +377,26 @@
             }
         }
 
-        function getFilteredRecords() {
-            const today = new Date();
-            return records.filter(r => {
-                const recDate = new Date(r.date);
-                if (currentFilter === '1month') {
-                    const oneMonthAgo = new Date();
-                    oneMonthAgo.setMonth(today.getMonth() - 1);
-                    return recDate >= oneMonthAgo;
-                } else if (currentFilter === '1year') {
-                    const oneYearAgo = new Date();
-                    oneYearAgo.setFullYear(today.getFullYear() - 1);
-                    return recDate >= oneYearAgo;
-                } else if (currentFilter === 'custom') {
-                    const startVal = document.getElementById('startDate').value;
-                    const endVal = document.getElementById('endDate').value;
-                    if (startVal && new Date(r.date) < new Date(startVal)) return false;
-                    if (endVal && new Date(r.date) > new Date(endVal)) return false;
-                    return true;
-                }
-                return true;
-            });
-        }
-
-        function renderTable() {
+        function renderTable(dataToRender) {
             const tbody = document.getElementById('recordsBody');
             const emptyState = document.getElementById('emptyState');
             tbody.innerHTML = '';
 
-            const filteredRecords = getFilteredRecords();
-
             let grandTotal = 0, grandAshwin = 0, grandPrithviraj = 0;
 
-            if (filteredRecords.length === 0) {
+            if (dataToRender.length === 0) {
                 emptyState.style.display = 'block';
             } else {
                 emptyState.style.display = 'none';
             }
 
-            filteredRecords.forEach(r => {
-                const ashwin = r.ashwinShare || (r.total * 0.25);
-                const prithviraj = r.prithvirajShare || (r.total * 0.75);
+            dataToRender.forEach(r => {
+                const prithviraj = r.prithvirajShare !== undefined ? r.prithvirajShare : (r.total * 0.75);
+                const ashwin = r.ashwinShare !== undefined ? r.ashwinShare : (r.total * 0.25);
 
                 grandTotal += r.total;
-                grandAshwin += ashwin;
                 grandPrithviraj += prithviraj;
+                grandAshwin += ashwin;
 
                 const row = document.createElement('tr');
                 row.innerHTML = `
@@ -436,26 +404,83 @@
                     <td>${r.quantity}</td>
                     <td>${r.price.toFixed(2)}</td>
                     <td><b>${r.total.toFixed(2)}</b></td>
-                    <td>${ashwin.toFixed(2)}</td>
                     <td>${prithviraj.toFixed(2)}</td>
+                    <td>${ashwin.toFixed(2)}</td>
                     <td class="no-pdf"><button class="action-btn" onclick="deleteRecord(${r.id})">Delete</button></td>
                 `;
                 tbody.appendChild(row);
             });
 
             document.getElementById('totalRevenue').textContent = '₹' + grandTotal.toFixed(2);
+            document.getElementById('totalPruthvirajsinh').textContent = '₹' + grandPrithviraj.toFixed(2);
             document.getElementById('totalAshwin').textContent = '₹' + grandAshwin.toFixed(2);
-            document.getElementById('totalPrithvirajsinh').textContent = '₹' + grandPrithviraj.toFixed(2);
+        }
+
+        function openPdfModal() {
+            document.getElementById('pdfModal').style.display = 'flex';
+        }
+
+        function closePdfModal() {
+            document.getElementById('pdfModal').style.display = 'none';
+        }
+
+        function generatePdf(filterType) {
+            let filtered = [...records];
+            const today = new Date();
+
+            if (filterType === '1month') {
+                const oneMonthAgo = new Date();
+                oneMonthAgo.setMonth(today.getMonth() - 1);
+                filtered = records.filter(r => new Date(r.date) >= oneMonthAgo);
+            } else if (filterType === '1year') {
+                const oneYearAgo = new Date();
+                oneYearAgo.setFullYear(today.getFullYear() - 1);
+                filtered = records.filter(r => new Date(r.date) >= oneYearAgo);
+            } else if (filterType === 'custom') {
+                const startVal = document.getElementById('pdfStartDate').value;
+                const endVal = document.getElementById('pdfEndDate').value;
+                filtered = records.filter(r => {
+                    if (startVal && new Date(r.date) < new Date(startVal)) return false;
+                    if (endVal && new Date(r.date) > new Date(endVal)) return false;
+                    return true;
+                });
+            }
+
+            if (filtered.length === 0) {
+                alert("No records match the selected date range.");
+                return;
+            }
+
+            closePdfModal();
+
+            // Render filtered view before capture
+            renderTable(filtered);
+
+            const noPdfElements = document.querySelectorAll('.no-pdf');
+            noPdfElements.forEach(el => el.style.display = 'none');
+
+            const element = document.getElementById('exportContent');
+            const opt = {
+                margin: [10, 10, 10, 10],
+                filename: `Coconut_Ledger_${filterType}.pdf`,
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { scale: 2, useCORS: true, logging: false },
+                jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+            };
+
+            html2pdf().set(opt).from(element).save().then(() => {
+                noPdfElements.forEach(el => el.style.display = '');
+                renderTable(records); // Restore all records view
+            });
         }
 
         function exportToCSV() {
-            const filteredRecords = getFilteredRecords();
-            if (filteredRecords.length === 0) return alert("No data available to export.");
-            let csvContent = "data:text/csv;charset=utf-8,Date,Quantity,Price Per Coconut,Total Price,Ashwin Share (25%),Prithviraj Share (75%)\n";
-            filteredRecords.forEach(r => {
-                const ashwin = r.ashwinShare || (r.total * 0.25);
-                const prithviraj = r.prithvirajShare || (r.total * 0.75);
-                csvContent += `${r.date},${r.quantity},${r.price},${r.total},${ashwin},${prithviraj}\n`;
+            if (records.length === 0) return alert("No data available to export.");
+            let csvContent = "data:text/csv;charset=utf-8,Date,Quantity,Price Per Coconut,Total Price,Pruthviraj Share (75%),Ashwin Share (25%)\n";
+            records.forEach(r => {
+                const prithviraj = r.prithvirajShare !== undefined ? r.prithvirajShare : (r.total * 0.75);
+                const ashwin = r.ashwinShare !== undefined ? r.ashwinShare : (r.total * 0.25);
+                csvContent += `${r.date},${r.quantity},${r.price},${r.total},${prithviraj},${ashwin}\n`;
             });
             const encodedUri = encodeURI(csvContent);
             const link = document.createElement("a");
@@ -466,25 +491,7 @@
             document.body.removeChild(link);
         }
 
-        function exportToPDF() {
-            const filteredRecords = getFilteredRecords();
-            if (filteredRecords.length === 0) return alert("No data available to export to PDF.");
-            const noPdfElements = document.querySelectorAll('.no-pdf');
-            noPdfElements.forEach(el => el.style.display = 'none');
-            const element = document.getElementById('exportContent');
-            const opt = {
-                margin: 10,
-                filename: 'Coconut_Price_Distribution.pdf',
-                image: { type: 'jpeg', quality: 0.98 },
-                html2canvas: { scale: 2 },
-                jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-            };
-            html2pdf().set(opt).from(element).save().then(() => {
-                noPdfElements.forEach(el => el.style.display = '');
-            });
-        }
-
-        renderTable();
+        renderTable(records);
     </script>
 </body>
 </html>
