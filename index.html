@@ -8,9 +8,9 @@
     <meta name="apple-mobile-web-app-title" content="Coconut Ledger">
     <title>Pruthvirajsinh Coconut Tool</title>
     
-    <!-- PDF Generation Libraries -->
+    <!-- PDF Generation Libraries for Direct Download -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.1/jspdf.plugin.autotable.min.js"></script>
 
     <style>
         :root {
@@ -244,6 +244,7 @@
         <p>Sales Ledger & Share Calculator</p>
     </div>
 
+    <!-- Data Input Form -->
     <div class="card">
         <form id="coconutForm">
             <div class="form-group">
@@ -257,7 +258,7 @@
             </div>
 
             <div class="form-group">
-                <label for="price">Price Per Coconut (Rs.)</label>
+                <label for="price">Price Per Coconut (₹)</label>
                 <input type="number" id="price" placeholder="e.g. 25" min="0.01" step="0.01" required>
             </div>
 
@@ -265,19 +266,20 @@
         </form>
     </div>
 
+    <!-- Live Preview Area -->
     <div id="exportContent">
         <div class="summary-card">
             <div class="summary-item">
                 <div class="title">Total Revenue</div>
-                <div class="amount" id="totalRevenue">Rs. 0.00</div>
+                <div class="amount" id="totalRevenue">₹0.00</div>
             </div>
             <div class="summary-item">
                 <div class="title">Pruthvirajsinh (75%)</div>
-                <div class="amount" id="totalPruthvirajsinh" style="color: #34C759;">Rs. 0.00</div>
+                <div class="amount" id="totalPruthvirajsinh" style="color: #34C759;">₹0.00</div>
             </div>
             <div class="summary-item">
                 <div class="title">Ashwin (25%)</div>
-                <div class="amount" id="totalAshwin" style="color: #007AFF;">Rs. 0.00</div>
+                <div class="amount" id="totalAshwin" style="color: #007AFF;">₹0.00</div>
             </div>
         </div>
 
@@ -303,6 +305,7 @@
         </div>
     </div>
 
+    <!-- Export Buttons -->
     <div class="btn-group">
         <button class="btn btn-export-csv" onclick="exportToCSV()">Export Excel (CSV)</button>
         <button class="btn btn-export-pdf" onclick="openPdfModal()">Export PDF</button>
@@ -401,17 +404,17 @@
                     <td>${r.date}</td>
                     <td>${r.quantity}</td>
                     <td>${r.price.toFixed(2)}</td>
-                    <td><b>Rs. ${r.total.toFixed(2)}</b></td>
-                    <td>Rs. ${prithviraj.toFixed(2)}</td>
-                    <td>Rs. ${ashwin.toFixed(2)}</td>
+                    <td><b>₹${r.total.toFixed(2)}</b></td>
+                    <td>₹${prithviraj.toFixed(2)}</td>
+                    <td>₹${ashwin.toFixed(2)}</td>
                     <td><button class="action-btn" onclick="deleteRecord(${r.id})">Delete</button></td>
                 `;
                 tbody.appendChild(row);
             });
 
-            document.getElementById('totalRevenue').textContent = 'Rs. ' + grandTotal.toFixed(2);
-            document.getElementById('totalPruthvirajsinh').textContent = 'Rs. ' + grandPrithviraj.toFixed(2);
-            document.getElementById('totalAshwin').textContent = 'Rs. ' + grandAshwin.toFixed(2);
+            document.getElementById('totalRevenue').textContent = '₹' + grandTotal.toFixed(2);
+            document.getElementById('totalPruthvirajsinh').textContent = '₹' + grandPrithviraj.toFixed(2);
+            document.getElementById('totalAshwin').textContent = '₹' + grandAshwin.toFixed(2);
         }
 
         function openPdfModal() {
@@ -422,10 +425,12 @@
             document.getElementById('pdfModal').style.display = 'none';
         }
 
+        // Direct PDF Generation (Bypasses Browser Print Dialog)
         function generatePdf(filterType) {
             let filtered = [...records];
             const now = new Date();
 
+            // Date filtering logic
             if (filterType === '1month') {
                 const oneMonthAgo = new Date();
                 oneMonthAgo.setMonth(now.getMonth() - 1);
@@ -451,20 +456,20 @@
 
             closePdfModal();
 
-            // Direct PDF generation using jsPDF
+            // Initialize jsPDF
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
 
-            // Document Header
+            // Document Header Text (No HTML forms will be printed)
             doc.setFontSize(18);
             doc.setTextColor(28, 28, 30);
             doc.text("Pruthvirajsinh Coconut Tool", 14, 20);
 
             doc.setFontSize(10);
             doc.setTextColor(142, 142, 147);
-            doc.text("Sales Ledger & Share Calculator", 14, 26);
+            doc.text("Sales Ledger & Share Calculator (" + filterType.toUpperCase() + ")", 14, 26);
 
-            // Compute totals for filtered data
+            // Compute totals for the generated PDF
             let totRev = 0, totPruthvi = 0, totAshwin = 0;
             const tableRows = filtered.map(r => {
                 const pruthvi = r.prithvirajShare !== undefined ? r.prithvirajShare : (r.total * 0.75);
@@ -473,6 +478,7 @@
                 totPruthvi += pruthvi;
                 totAshwin += ashwin;
 
+                // Note: Using 'Rs.' in PDF generation instead of '₹' to prevent font encoding errors in standard jsPDF
                 return [
                     r.date,
                     r.quantity.toString(),
@@ -483,7 +489,7 @@
                 ];
             });
 
-            // Summary Table
+            // Summary Totals Table in PDF
             doc.autoTable({
                 startY: 32,
                 head: [['Total Revenue', 'Pruthvirajsinh (75%)', 'Ashwin (25%)']],
@@ -497,7 +503,7 @@
                 bodyStyles: { fontStyle: 'bold', textColor: [0, 122, 255] }
             });
 
-            // Records Table
+            // Transaction History Table in PDF
             doc.autoTable({
                 startY: doc.lastAutoTable.finalY + 10,
                 head: [['Date', 'Qty', 'Price', 'Total', 'Pruthvirajsinh (75%)', 'Ashwin (25%)']],
@@ -507,8 +513,9 @@
                 styles: { fontSize: 9, cellPadding: 3 }
             });
 
-            // Trigger instant download
-            doc.save(`Coconut_Ledger_${filterType}_${new Date().toISOString().slice(0, 10)}.pdf`);
+            // INSTANT DIRECT DOWNLOAD - NO BROWSER PRINT PREVIEW
+            const fileName = `Coconut_Ledger_${filterType}_${new Date().toISOString().slice(0, 10)}.pdf`;
+            doc.save(fileName);
         }
 
         function exportToCSV() {
