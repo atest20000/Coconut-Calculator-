@@ -7,6 +7,11 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Coconut Ledger">
     <title>Pruthvirajsinh Coconut Tool</title>
+    
+    <!-- PDF Generation Libraries -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+
     <style>
         :root {
             --ios-bg: #F2F2F7;
@@ -185,12 +190,6 @@
             font-size: 14px;
         }
 
-        .pdf-export-area {
-            background: white;
-            padding: 10px;
-            border-radius: 8px;
-        }
-
         /* Filter Modal Styling */
         .modal-overlay {
             position: fixed;
@@ -236,31 +235,6 @@
             color: white;
             border: none;
         }
-
-        /* Print/PDF Specific Styles */
-        @media print {
-            body {
-                background-color: #FFFFFF !important;
-                padding: 0 !important;
-            }
-            .header, .card:first-of-type, .btn-group, .modal-overlay, .no-pdf {
-                display: none !important;
-            }
-            .pdf-export-area {
-                padding: 0 !important;
-            }
-            .summary-card {
-                border: 1px solid #000 !important;
-                background-color: #FFF !important;
-            }
-            table {
-                width: 100% !important;
-                border: 1px solid #000 !important;
-            }
-            th, td {
-                border-bottom: 1px solid #000 !important;
-            }
-        }
     </style>
 </head>
 <body>
@@ -283,7 +257,7 @@
             </div>
 
             <div class="form-group">
-                <label for="price">Price Per Coconut (₹/$)</label>
+                <label for="price">Price Per Coconut (Rs.)</label>
                 <input type="number" id="price" placeholder="e.g. 25" min="0.01" step="0.01" required>
             </div>
 
@@ -291,19 +265,19 @@
         </form>
     </div>
 
-    <div id="exportContent" class="pdf-export-area">
+    <div id="exportContent">
         <div class="summary-card">
             <div class="summary-item">
                 <div class="title">Total Revenue</div>
-                <div class="amount" id="totalRevenue">₹0.00</div>
+                <div class="amount" id="totalRevenue">Rs. 0.00</div>
             </div>
             <div class="summary-item">
                 <div class="title">Pruthvirajsinh (75%)</div>
-                <div class="amount" id="totalPruthvirajsinh" style="color: #34C759;">₹0.00</div>
+                <div class="amount" id="totalPruthvirajsinh" style="color: #34C759;">Rs. 0.00</div>
             </div>
             <div class="summary-item">
                 <div class="title">Ashwin (25%)</div>
-                <div class="amount" id="totalAshwin" style="color: #007AFF;">₹0.00</div>
+                <div class="amount" id="totalAshwin" style="color: #007AFF;">Rs. 0.00</div>
             </div>
         </div>
 
@@ -319,7 +293,7 @@
                             <th>Total</th>
                             <th>Pruthvirajsinh (75%)</th>
                             <th>Ashwin (25%)</th>
-                            <th class="no-pdf">Action</th>
+                            <th>Action</th>
                         </tr>
                     </thead>
                     <tbody id="recordsBody"></tbody>
@@ -427,17 +401,17 @@
                     <td>${r.date}</td>
                     <td>${r.quantity}</td>
                     <td>${r.price.toFixed(2)}</td>
-                    <td><b>${r.total.toFixed(2)}</b></td>
-                    <td>${prithviraj.toFixed(2)}</td>
-                    <td>${ashwin.toFixed(2)}</td>
-                    <td class="no-pdf"><button class="action-btn" onclick="deleteRecord(${r.id})">Delete</button></td>
+                    <td><b>Rs. ${r.total.toFixed(2)}</b></td>
+                    <td>Rs. ${prithviraj.toFixed(2)}</td>
+                    <td>Rs. ${ashwin.toFixed(2)}</td>
+                    <td><button class="action-btn" onclick="deleteRecord(${r.id})">Delete</button></td>
                 `;
                 tbody.appendChild(row);
             });
 
-            document.getElementById('totalRevenue').textContent = '₹' + grandTotal.toFixed(2);
-            document.getElementById('totalPruthvirajsinh').textContent = '₹' + grandPrithviraj.toFixed(2);
-            document.getElementById('totalAshwin').textContent = '₹' + grandAshwin.toFixed(2);
+            document.getElementById('totalRevenue').textContent = 'Rs. ' + grandTotal.toFixed(2);
+            document.getElementById('totalPruthvirajsinh').textContent = 'Rs. ' + grandPrithviraj.toFixed(2);
+            document.getElementById('totalAshwin').textContent = 'Rs. ' + grandAshwin.toFixed(2);
         }
 
         function openPdfModal() {
@@ -477,14 +451,64 @@
 
             closePdfModal();
 
-            // Render target dataset into view
-            renderTable(filtered);
+            // Direct PDF generation using jsPDF
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
 
-            // Trigger system print dialogue (allows direct PDF save on iOS/Android/Chrome)
-            setTimeout(() => {
-                window.print();
-                renderTable(records); // Restore full record view after trigger
-            }, 300);
+            // Document Header
+            doc.setFontSize(18);
+            doc.setTextColor(28, 28, 30);
+            doc.text("Pruthvirajsinh Coconut Tool", 14, 20);
+
+            doc.setFontSize(10);
+            doc.setTextColor(142, 142, 147);
+            doc.text("Sales Ledger & Share Calculator", 14, 26);
+
+            // Compute totals for filtered data
+            let totRev = 0, totPruthvi = 0, totAshwin = 0;
+            const tableRows = filtered.map(r => {
+                const pruthvi = r.prithvirajShare !== undefined ? r.prithvirajShare : (r.total * 0.75);
+                const ashwin = r.ashwinShare !== undefined ? r.ashwinShare : (r.total * 0.25);
+                totRev += r.total;
+                totPruthvi += pruthvi;
+                totAshwin += ashwin;
+
+                return [
+                    r.date,
+                    r.quantity.toString(),
+                    'Rs. ' + r.price.toFixed(2),
+                    'Rs. ' + r.total.toFixed(2),
+                    'Rs. ' + pruthvi.toFixed(2),
+                    'Rs. ' + ashwin.toFixed(2)
+                ];
+            });
+
+            // Summary Table
+            doc.autoTable({
+                startY: 32,
+                head: [['Total Revenue', 'Pruthvirajsinh (75%)', 'Ashwin (25%)']],
+                body: [[
+                    'Rs. ' + totRev.toFixed(2),
+                    'Rs. ' + totPruthvi.toFixed(2),
+                    'Rs. ' + totAshwin.toFixed(2)
+                ]],
+                theme: 'grid',
+                headStyles: { fillColor: [229, 241, 255], textColor: [0, 0, 0], fontStyle: 'bold' },
+                bodyStyles: { fontStyle: 'bold', textColor: [0, 122, 255] }
+            });
+
+            // Records Table
+            doc.autoTable({
+                startY: doc.lastAutoTable.finalY + 10,
+                head: [['Date', 'Qty', 'Price', 'Total', 'Pruthvirajsinh (75%)', 'Ashwin (25%)']],
+                body: tableRows,
+                theme: 'striped',
+                headStyles: { fillColor: [0, 122, 255], textColor: [255, 255, 255], fontStyle: 'bold' },
+                styles: { fontSize: 9, cellPadding: 3 }
+            });
+
+            // Trigger instant download
+            doc.save(`Coconut_Ledger_${filterType}_${new Date().toISOString().slice(0, 10)}.pdf`);
         }
 
         function exportToCSV() {
