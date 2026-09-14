@@ -1,2 +1,376 @@
-# Coconut-Calculator-
-Coconut Calculator 
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Coconut Ledger">
+    <title>Coconut Price Distribution Tool</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <style>
+        :root {
+            --ios-bg: #F2F2F7;
+            --ios-card: #FFFFFF;
+            --ios-primary: #007AFF;
+            --ios-danger: #FF3B30;
+            --ios-text: #000000;
+            --ios-secondary-text: #8E8E93;
+            --ios-border: #C6C6C8;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--ios-bg);
+            color: var(--ios-text);
+            margin: 0;
+            padding: 20px 16px 40px 16px;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+            margin-top: 10px;
+        }
+
+        .header h1 {
+            font-size: 22px;
+            font-weight: 700;
+            margin: 0 0 5px 0;
+            color: #1C1C1E;
+        }
+
+        .header p {
+            font-size: 13px;
+            color: var(--ios-secondary-text);
+            margin: 0;
+        }
+
+        .card {
+            background-color: var(--ios-card);
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 20px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+
+        .form-group {
+            margin-bottom: 14px;
+        }
+
+        label {
+            display: block;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--ios-secondary-text);
+            text-transform: uppercase;
+            margin-bottom: 6px;
+        }
+
+        input {
+            width: 100%;
+            height: 44px;
+            padding: 8px 12px;
+            border: 1px solid var(--ios-border);
+            border-radius: 8px;
+            font-size: 16px;
+            box-sizing: border-box;
+            background-color: #FAFAFA;
+            -webkit-appearance: none;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: var(--ios-primary);
+            background-color: #FFFFFF;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .btn {
+            width: 100%;
+            height: 48px;
+            background-color: var(--ios-primary);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-decoration: none;
+        }
+
+        .btn-export-csv {
+            background-color: #34C759;
+        }
+
+        .btn-export-pdf {
+            background-color: #FF9500;
+        }
+
+        .summary-card {
+            display: flex;
+            justify-content: space-between;
+            background-color: #E5F1FF;
+            border: 1px solid #B3D7FF;
+            border-radius: 10px;
+            padding: 12px 16px;
+            margin-bottom: 15px;
+        }
+
+        .summary-item {
+            text-align: center;
+        }
+
+        .summary-item .title {
+            font-size: 11px;
+            color: var(--ios-secondary-text);
+            text-transform: uppercase;
+            margin-bottom: 4px;
+        }
+
+        .summary-item .amount {
+            font-size: 15px;
+            font-weight: 700;
+        }
+
+        .table-container {
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+            text-align: left;
+        }
+
+        th {
+            background-color: var(--ios-bg);
+            color: var(--ios-secondary-text);
+            font-weight: 600;
+            padding: 10px 8px;
+            border-bottom: 1px solid var(--ios-border);
+            white-space: nowrap;
+        }
+
+        td {
+            padding: 12px 8px;
+            border-bottom: 1px solid #E5E5EA;
+            white-space: nowrap;
+        }
+
+        .action-btn {
+            color: var(--ios-danger);
+            border: none;
+            background: none;
+            font-size: 13px;
+            font-weight: 600;
+            padding: 0;
+            cursor: pointer;
+        }
+
+        .empty-state {
+            text-align: center;
+            color: var(--ios-secondary-text);
+            padding: 20px 0;
+            font-size: 14px;
+        }
+
+        .pdf-export-area {
+            background: white;
+            padding: 10px;
+            border-radius: 8px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <h1>Coconut Price Distribution Tool</h1>
+        <p>Sales Ledger & Share Calculator</p>
+    </div>
+
+    <div class="card">
+        <form id="coconutForm">
+            <div class="form-group">
+                <label for="date">Date</label>
+                <input type="date" id="date" required>
+            </div>
+
+            <div class="form-group">
+                <label for="quantity">Quantity (Pcs)</label>
+                <input type="number" id="quantity" placeholder="e.g. 500" min="1" step="1" required>
+            </div>
+
+            <div class="form-group">
+                <label for="price">Price Per Coconut (₹/$)</label>
+                <input type="number" id="price" placeholder="e.g. 25" min="0.01" step="0.01" required>
+            </div>
+
+            <button type="submit" class="btn">Add Transaction</button>
+        </form>
+    </div>
+
+    <div id="exportContent" class="pdf-export-area">
+        <div class="summary-card">
+            <div class="summary-item">
+                <div class="title">Total Revenue</div>
+                <div class="amount" id="totalRevenue">₹0.00</div>
+            </div>
+            <div class="summary-item">
+                <div class="title">Ashwin (25%)</div>
+                <div class="amount" id="totalAshwin" style="color: #007AFF;">₹0.00</div>
+            </div>
+            <div class="summary-item">
+                <div class="title">Prithviraj (75%)</div>
+                <div class="amount" id="totalPrithviraj" style="color: #34C759;">₹0.00</div>
+            </div>
+        </div>
+
+        <div class="card">
+            <label style="margin-bottom:10px;">Transaction History</label>
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Qty</th>
+                            <th>Price</th>
+                            <th>Total</th>
+                            <th>Ashwin (25%)</th>
+                            <th>Prithviraj (75%)</th>
+                            <th class="no-pdf">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="recordsBody"></tbody>
+                </table>
+                <div id="emptyState" class="empty-state">No sales records added yet.</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="btn-group">
+        <button class="btn btn-export-csv" onclick="exportToCSV()">Export Excel (CSV)</button>
+        <button class="btn btn-export-pdf" onclick="exportToPDF()">Export PDF</button>
+    </div>
+
+    <script>
+        document.getElementById('date').valueAsDate = new Date();
+        let records = JSON.parse(localStorage.getItem('coconut_records')) || [];
+
+        function saveAndRender() {
+            localStorage.setItem('coconut_records', JSON.stringify(records));
+            renderTable();
+        }
+
+        document.getElementById('coconutForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const date = document.getElementById('date').value;
+            const quantity = parseFloat(document.getElementById('quantity').value);
+            const price = parseFloat(document.getElementById('price').value);
+            const total = quantity * price;
+
+            records.unshift({
+                id: Date.now(),
+                date: date,
+                quantity: quantity,
+                price: price,
+                total: total,
+                ashwinShare: total * 0.25,
+                prithvirajShare: total * 0.75
+            });
+
+            saveAndRender();
+            document.getElementById('quantity').value = '';
+            document.getElementById('price').value = '';
+        });
+
+        function deleteRecord(id) {
+            if (confirm("Are you sure you want to delete this record?")) {
+                records = records.filter(r => r.id !== id);
+                saveAndRender();
+            }
+        }
+
+        function renderTable() {
+            const tbody = document.getElementById('recordsBody');
+            const emptyState = document.getElementById('emptyState');
+            tbody.innerHTML = '';
+
+            let grandTotal = 0, grandAshwin = 0, grandPrithviraj = 0;
+
+            if (records.length === 0) {
+                emptyState.style.display = 'block';
+            } else {
+                emptyState.style.display = 'none';
+            }
+
+            records.forEach(r => {
+                grandTotal += r.total;
+                grandAshwin += r.ashwinShare;
+                grandPrithviraj += r.prithvirajShare;
+
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${r.date}</td>
+                    <td>${r.quantity}</td>
+                    <td>${r.price.toFixed(2)}</td>
+                    <td><b>${r.total.toFixed(2)}</b></td>
+                    <td>${r.ashwinShare.toFixed(2)}</td>
+                    <td>${r.prithvirajShare.toFixed(2)}</td>
+                    <td class="no-pdf"><button class="action-btn" onclick="deleteRecord(${r.id})">Delete</button></td>
+                `;
+                tbody.appendChild(row);
+            });
+
+            document.getElementById('totalRevenue').textContent = '₹' + grandTotal.toFixed(2);
+            document.getElementById('totalAshwin').textContent = '₹' + grandAshwin.toFixed(2);
+            document.getElementById('totalPrithviraj').textContent = '₹' + grandPrithviraj.toFixed(2);
+        }
+
+        function exportToCSV() {
+            if (records.length === 0) return alert("No data available to export.");
+            let csvContent = "data:text/csv;charset=utf-8,Date,Quantity,Price Per Coconut,Total Price,Ashwin Share (25%),Prithviraj Share (75%)\n";
+            records.forEach(r => {
+                csvContent += `${r.date},${r.quantity},${r.price},${r.total},${r.ashwinShare},${r.prithvirajShare}\n`;
+            });
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", "Coconut_Price_Distribution.csv");
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        function exportToPDF() {
+            if (records.length === 0) return alert("No data available to export to PDF.");
+            const noPdfElements = document.querySelectorAll('.no-pdf');
+            noPdfElements.forEach(el => el.style.display = 'none');
+            const element = document.getElementById('exportContent');
+            const opt = {
+                margin: 10,
+                filename: 'Coconut_Price_Distribution.pdf',
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { scale: 2 },
+                jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+            };
+            html2pdf().set(opt).from(element).save().then(() => {
+                noPdfElements.forEach(el => el.style.display = '');
+            });
+        }
+
+        renderTable();
+    </script>
+</body>
+</html>
