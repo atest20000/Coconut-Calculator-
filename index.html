@@ -7,7 +7,6 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Coconut Ledger">
     <title>Pruthvirajsinh Coconut Tool</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <style>
         :root {
             --ios-bg: #F2F2F7;
@@ -237,6 +236,31 @@
             color: white;
             border: none;
         }
+
+        /* Print/PDF Specific Styles */
+        @media print {
+            body {
+                background-color: #FFFFFF !important;
+                padding: 0 !important;
+            }
+            .header, .card:first-of-type, .btn-group, .modal-overlay, .no-pdf {
+                display: none !important;
+            }
+            .pdf-export-area {
+                padding: 0 !important;
+            }
+            .summary-card {
+                border: 1px solid #000 !important;
+                background-color: #FFF !important;
+            }
+            table {
+                width: 100% !important;
+                border: 1px solid #000 !important;
+            }
+            th, td {
+                border-bottom: 1px solid #000 !important;
+            }
+        }
     </style>
 </head>
 <body>
@@ -384,7 +408,7 @@
 
             let grandTotal = 0, grandAshwin = 0, grandPrithviraj = 0;
 
-            if (dataToRender.length === 0) {
+            if (!dataToRender || dataToRender.length === 0) {
                 emptyState.style.display = 'block';
             } else {
                 emptyState.style.display = 'none';
@@ -426,22 +450,22 @@
 
         function generatePdf(filterType) {
             let filtered = [...records];
-            const today = new Date();
+            const now = new Date();
 
             if (filterType === '1month') {
                 const oneMonthAgo = new Date();
-                oneMonthAgo.setMonth(today.getMonth() - 1);
-                filtered = records.filter(r => new Date(r.date) >= oneMonthAgo);
+                oneMonthAgo.setMonth(now.getMonth() - 1);
+                filtered = records.filter(r => new Date(r.date + 'T00:00:00') >= oneMonthAgo);
             } else if (filterType === '1year') {
                 const oneYearAgo = new Date();
-                oneYearAgo.setFullYear(today.getFullYear() - 1);
-                filtered = records.filter(r => new Date(r.date) >= oneYearAgo);
+                oneYearAgo.setFullYear(now.getFullYear() - 1);
+                filtered = records.filter(r => new Date(r.date + 'T00:00:00') >= oneYearAgo);
             } else if (filterType === 'custom') {
                 const startVal = document.getElementById('pdfStartDate').value;
                 const endVal = document.getElementById('pdfEndDate').value;
                 filtered = records.filter(r => {
-                    if (startVal && new Date(r.date) < new Date(startVal)) return false;
-                    if (endVal && new Date(r.date) > new Date(endVal)) return false;
+                    if (startVal && r.date < startVal) return false;
+                    if (endVal && r.date > endVal) return false;
                     return true;
                 });
             }
@@ -453,25 +477,14 @@
 
             closePdfModal();
 
-            // Render filtered view before capture
+            // Render target dataset into view
             renderTable(filtered);
 
-            const noPdfElements = document.querySelectorAll('.no-pdf');
-            noPdfElements.forEach(el => el.style.display = 'none');
-
-            const element = document.getElementById('exportContent');
-            const opt = {
-                margin: [10, 10, 10, 10],
-                filename: `Coconut_Ledger_${filterType}.pdf`,
-                image: { type: 'jpeg', quality: 0.98 },
-                html2canvas: { scale: 2, useCORS: true, logging: false },
-                jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-            };
-
-            html2pdf().set(opt).from(element).save().then(() => {
-                noPdfElements.forEach(el => el.style.display = '');
-                renderTable(records); // Restore all records view
-            });
+            // Trigger system print dialogue (allows direct PDF save on iOS/Android/Chrome)
+            setTimeout(() => {
+                window.print();
+                renderTable(records); // Restore full record view after trigger
+            }, 300);
         }
 
         function exportToCSV() {
