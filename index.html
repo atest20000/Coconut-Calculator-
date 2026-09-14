@@ -6,7 +6,7 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Coconut Ledger">
-    <title>Pruthvirajsinh Coconut Price Distribution Tool</title>
+    <title>Pruthvirajsinh Coconut Price Tool</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <style>
         :root {
@@ -84,6 +84,37 @@
             outline: none;
             border-color: var(--ios-primary);
             background-color: #FFFFFF;
+        }
+
+        .filter-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 15px;
+        }
+
+        .filter-btn {
+            flex: 1;
+            min-width: 80px;
+            height: 36px;
+            background-color: #E5E5EA;
+            color: var(--ios-text);
+            border: none;
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .filter-btn.active {
+            background-color: var(--ios-primary);
+            color: white;
+        }
+
+        .custom-date-container {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
         }
 
         .btn-group {
@@ -196,7 +227,7 @@
 <body>
 
     <div class="header">
-        <h1>Pruthvirajsinh Coconut Price Distribution Tool</h1>
+        <h1>Pruthvirajsinh Coconut Price Tool</h1>
         <p>Sales Ledger & Share Calculator</p>
     </div>
 
@@ -219,6 +250,27 @@
 
             <button type="submit" class="btn">Add Transaction</button>
         </form>
+    </div>
+
+    <div class="card">
+        <label style="margin-bottom:10px;">Filter Records</label>
+        <div class="filter-group">
+            <button class="filter-btn active" id="btnAll" onclick="setFilter('all')">All Time</button>
+            <button class="filter-btn" id="btn1Month" onclick="setFilter('1month')">Last 1 Month</button>
+            <button class="filter-btn" id="btn1Year" onclick="setFilter('1year')">Last 1 Year</button>
+            <button class="filter-btn" id="btnCustom" onclick="setFilter('custom')">Custom Date</button>
+        </div>
+
+        <div id="customDateRange" class="custom-date-container" style="display: none;">
+            <div style="flex: 1;">
+                <label style="font-size: 11px;">Start Date</label>
+                <input type="date" id="startDate" onchange="renderTable()">
+            </div>
+            <div style="flex: 1;">
+                <label style="font-size: 11px;">End Date</label>
+                <input type="date" id="endDate" onchange="renderTable()">
+            </div>
+        </div>
     </div>
 
     <div id="exportContent" class="pdf-export-area">
@@ -254,7 +306,7 @@
                     </thead>
                     <tbody id="recordsBody"></tbody>
                 </table>
-                <div id="emptyState" class="empty-state">No sales records added yet.</div>
+                <div id="emptyState" class="empty-state">No sales records found.</div>
             </div>
         </div>
     </div>
@@ -265,8 +317,37 @@
     </div>
 
     <script>
-        document.getElementById('date').valueAsDate = new Date();
+        function setTodayDate() {
+            const today = new Date();
+            const year = today.getFullYear();
+            const month = String(today.getMonth() + 1).padStart(2, '0');
+            const day = String(today.getDate()).padStart(2, '0');
+            document.getElementById('date').value = `${year}-${month}-${day}`;
+        }
+
+        setTodayDate();
+
         let records = JSON.parse(localStorage.getItem('coconut_records')) || [];
+        let currentFilter = 'all';
+
+        function setFilter(filterType) {
+            currentFilter = filterType;
+            document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
+            
+            if (filterType === 'all') document.getElementById('btnAll').classList.add('active');
+            if (filterType === '1month') document.getElementById('btn1Month').classList.add('active');
+            if (filterType === '1year') document.getElementById('btn1Year').classList.add('active');
+            if (filterType === 'custom') document.getElementById('btnCustom').classList.add('active');
+
+            const customBox = document.getElementById('customDateRange');
+            if (filterType === 'custom') {
+                customBox.style.display = 'flex';
+            } else {
+                customBox.style.display = 'none';
+            }
+
+            renderTable();
+        }
 
         function saveAndRender() {
             localStorage.setItem('coconut_records', JSON.stringify(records));
@@ -293,6 +374,7 @@
             saveAndRender();
             document.getElementById('quantity').value = '';
             document.getElementById('price').value = '';
+            setTodayDate();
         });
 
         function deleteRecord(id) {
@@ -302,23 +384,51 @@
             }
         }
 
+        function getFilteredRecords() {
+            const today = new Date();
+            return records.filter(r => {
+                const recDate = new Date(r.date);
+                if (currentFilter === '1month') {
+                    const oneMonthAgo = new Date();
+                    oneMonthAgo.setMonth(today.getMonth() - 1);
+                    return recDate >= oneMonthAgo;
+                } else if (currentFilter === '1year') {
+                    const oneYearAgo = new Date();
+                    oneYearAgo.setFullYear(today.getFullYear() - 1);
+                    return recDate >= oneYearAgo;
+                } else if (currentFilter === 'custom') {
+                    const startVal = document.getElementById('startDate').value;
+                    const endVal = document.getElementById('endDate').value;
+                    if (startVal && new Date(r.date) < new Date(startVal)) return false;
+                    if (endVal && new Date(r.date) > new Date(endVal)) return false;
+                    return true;
+                }
+                return true;
+            });
+        }
+
         function renderTable() {
             const tbody = document.getElementById('recordsBody');
             const emptyState = document.getElementById('emptyState');
             tbody.innerHTML = '';
 
+            const filteredRecords = getFilteredRecords();
+
             let grandTotal = 0, grandAshwin = 0, grandPrithviraj = 0;
 
-            if (records.length === 0) {
+            if (filteredRecords.length === 0) {
                 emptyState.style.display = 'block';
             } else {
                 emptyState.style.display = 'none';
             }
 
-            records.forEach(r => {
+            filteredRecords.forEach(r => {
+                const ashwin = r.ashwinShare || (r.total * 0.25);
+                const prithviraj = r.prithvirajShare || (r.total * 0.75);
+
                 grandTotal += r.total;
-                grandAshwin += r.ashwinShare;
-                grandPrithviraj += r.prithvirajShare;
+                grandAshwin += ashwin;
+                grandPrithviraj += prithviraj;
 
                 const row = document.createElement('tr');
                 row.innerHTML = `
@@ -326,8 +436,8 @@
                     <td>${r.quantity}</td>
                     <td>${r.price.toFixed(2)}</td>
                     <td><b>${r.total.toFixed(2)}</b></td>
-                    <td>${r.ashwinShare.toFixed(2)}</td>
-                    <td>${r.prithvirajShare.toFixed(2)}</td>
+                    <td>${ashwin.toFixed(2)}</td>
+                    <td>${prithviraj.toFixed(2)}</td>
                     <td class="no-pdf"><button class="action-btn" onclick="deleteRecord(${r.id})">Delete</button></td>
                 `;
                 tbody.appendChild(row);
@@ -335,14 +445,17 @@
 
             document.getElementById('totalRevenue').textContent = '₹' + grandTotal.toFixed(2);
             document.getElementById('totalAshwin').textContent = '₹' + grandAshwin.toFixed(2);
-            document.getElementById('totalPrithviraj').textContent = '₹' + grandPrithviraj.toFixed(2);
+            document.getElementById('totalPrithvirajsinh').textContent = '₹' + grandPrithviraj.toFixed(2);
         }
 
         function exportToCSV() {
-            if (records.length === 0) return alert("No data available to export.");
+            const filteredRecords = getFilteredRecords();
+            if (filteredRecords.length === 0) return alert("No data available to export.");
             let csvContent = "data:text/csv;charset=utf-8,Date,Quantity,Price Per Coconut,Total Price,Ashwin Share (25%),Prithviraj Share (75%)\n";
-            records.forEach(r => {
-                csvContent += `${r.date},${r.quantity},${r.price},${r.total},${r.ashwinShare},${r.prithvirajShare}\n`;
+            filteredRecords.forEach(r => {
+                const ashwin = r.ashwinShare || (r.total * 0.25);
+                const prithviraj = r.prithvirajShare || (r.total * 0.75);
+                csvContent += `${r.date},${r.quantity},${r.price},${r.total},${ashwin},${prithviraj}\n`;
             });
             const encodedUri = encodeURI(csvContent);
             const link = document.createElement("a");
@@ -354,7 +467,8 @@
         }
 
         function exportToPDF() {
-            if (records.length === 0) return alert("No data available to export to PDF.");
+            const filteredRecords = getFilteredRecords();
+            if (filteredRecords.length === 0) return alert("No data available to export to PDF.");
             const noPdfElements = document.querySelectorAll('.no-pdf');
             noPdfElements.forEach(el => el.style.display = 'none');
             const element = document.getElementById('exportContent');
